@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
@@ -9,20 +10,26 @@ import (
 type Operation string
 
 const (
-	Add = Operation("add")
-	List = Operation("list")
+	Add    = Operation("add")
+	List   = Operation("list")
 	Delete = Operation("delete")
 	Toggle = Operation("toggle")
 )
 
 type Todo struct {
-	ID int
-	Name string
-	Completed bool
+	ID        int    `json:"id"`
+	Name      string `json:"name"`
+	Completed bool   `json:"completed"`
 }
 
-func (t Todo)String() string {
-	return fmt.Sprintf("%v\t%v\t%v", t.ID, t.Name, t.Completed)
+func (t Todo) String() string {
+	var tick string
+	if t.Completed {
+		tick = "X"
+	} else {
+		tick = " "
+	}
+	return fmt.Sprintf("%v [%v]\t%v", t.ID, tick, t.Name)
 }
 
 func main() {
@@ -31,19 +38,17 @@ func main() {
 		return
 	}
 
-	todos := []Todo{
-		{
-			1,
-			"Do something",
-			false,
-		},
-		{
-			24,
-			"Do nothing",
-			true,
-		},
+	dataFile, err := os.OpenFile("data.json", os.O_RDWR, 0644)
+	if err != nil {
+		panic(err)
 	}
-
+	defer dataFile.Close()
+	var todos []Todo
+	err = json.NewDecoder(dataFile).Decode(&todos)
+	if err != nil {
+		panic(err)
+	}
+	
 	operation := Operation(os.Args[1])
 
 	switch operation {
@@ -54,8 +59,12 @@ func main() {
 			fmt.Println("Todo name not provided")
 			return
 		}
-		todos = append(todos, CreateTodo(os.Args[2], len(todos)))
+		todos = append(todos, CreateTodo(os.Args[2], len(todos)+1))
 		ListTodos(todos)
+		err = SaveTodos(todos, dataFile) 
+		if err != nil {
+			fmt.Println("Could not write to data file", err)
+		}
 	case Delete:
 		if len(os.Args) < 3 {
 			fmt.Println("Todo id not provided")
@@ -72,6 +81,10 @@ func main() {
 			return
 		}
 		ListTodos(todos)
+		err = SaveTodos(todos, dataFile) 
+		if err != nil {
+			fmt.Println("Could not write to data file", err)
+		}
 	case Toggle:
 		if len(os.Args) < 3 {
 			fmt.Println("Todo id not provided")
@@ -88,13 +101,16 @@ func main() {
 			return
 		}
 		ListTodos(todos)
+		err = SaveTodos(todos, dataFile) 
+		if err != nil {
+			fmt.Println("Could not write to data file", err)
+		}
 	}
-
 }
 
 func ListTodos(todos []Todo) {
 	for _, t := range todos {
-		fmt.Println(t);
+		fmt.Println(t)
 	}
 }
 
@@ -114,7 +130,6 @@ func DeleteTodo(todos []Todo, id int) ([]Todo, bool) {
 			result = append(result, t)
 		} else {
 			found = true
-			break
 		}
 	}
 	return result, found
@@ -130,4 +145,15 @@ func ToggleTodo(todos []Todo, id int) bool {
 		}
 	}
 	return found
+}
+
+func SaveTodos(todos []Todo, dataFile *os.File) error {
+	if _, err := dataFile.Seek(0, 0); err != nil {
+		return err
+	}
+	if err := dataFile.Truncate(0); err != nil {
+		fmt.Println("Error truncating file:", err)
+		return err
+	}
+	return json.NewEncoder(dataFile).Encode(todos)
 }
