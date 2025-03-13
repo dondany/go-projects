@@ -38,19 +38,16 @@ func main() {
 		return
 	}
 
-	dataFile, err := os.OpenFile("data.json", os.O_RDWR, 0644)
+	dataFile, err := openDataFile("data.json");
 	if err != nil {
 		panic(err)
 	}
-	defer dataFile.Close()
-	var todos []Todo
-	err = json.NewDecoder(dataFile).Decode(&todos)
+	todos, err := LoadTodos(dataFile);
 	if err != nil {
 		panic(err)
 	}
-	
-	operation := Operation(os.Args[1])
 
+	operation := Operation(os.Args[1])
 	switch operation {
 	case List:
 		ListTodos(todos)
@@ -106,6 +103,23 @@ func main() {
 			fmt.Println("Could not write to data file", err)
 		}
 	}
+}
+
+func openDataFile(filename string) (*os.File, error) {
+	dataFile, err := os.OpenFile(filename, os.O_RDWR, 0644)
+	if err != nil {
+		return dataFile, err
+	}
+	return dataFile, nil
+}
+
+func LoadTodos(dataFile *os.File) ([]Todo, error) {
+	var todos []Todo
+	err := json.NewDecoder(dataFile).Decode(&todos)
+	if err != nil {
+		return nil, err
+	}
+	return todos, nil
 }
 
 func ListTodos(todos []Todo) {
