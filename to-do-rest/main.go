@@ -9,7 +9,7 @@ import (
 
 	"github.com/dondany/go-projects/to-do-rest/models"
 	"github.com/dondany/go-projects/to-do-rest/repositories"
-	"github.com/dondany/go-projects/to-do-rest/services.go"
+	"github.com/dondany/go-projects/to-do-rest/services"
 )
 
 func main() {
