@@ -1,7 +1,7 @@
 package repositories
 
 import (
-	"github.com/dondany/go-projects/to-do-rest/models"
+	"github.com/dondany/go-projects/to-do-rest/internal/models"
 )
 
 type TodoRepository interface {

@@ -36,6 +36,12 @@ Data should be stored in a PostrgeSQL db.
 #### Docker
 
 The database should be run as a docker container using docker compose.
+To init the database:
+
+```
+docker cp pkg/db/db_init.sql postgres_db:/db_init.sql
+docker exec -i postgres_db psql -U admin -d db -f /db_init.sql
+```
 
 #### env variables
 

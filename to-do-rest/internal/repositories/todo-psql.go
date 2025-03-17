@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/dondany/go-projects/to-do-rest/models"
+	"github.com/dondany/go-projects/to-do-rest/internal/models"
 )
 
 type TodoPostgreSqlRepository struct {

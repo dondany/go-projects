@@ -7,7 +7,7 @@ type Todo struct {
 }
 
 type TodoList struct {
-	ID    int     `json:"id"`
-	Name  string  `json:"name"`
+	ID    int    `json:"id"`
+	Name  string `json:"name"`
 	Todos []Todo `json:"todos,omitempty"`
 }

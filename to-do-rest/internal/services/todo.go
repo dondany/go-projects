@@ -1,8 +1,8 @@
 package services
 
 import (
-	"github.com/dondany/go-projects/to-do-rest/models"
-	"github.com/dondany/go-projects/to-do-rest/repositories"
+	"github.com/dondany/go-projects/to-do-rest/internal/models"
+	"github.com/dondany/go-projects/to-do-rest/internal/repositories"
 )
 
 type TodoService interface {
