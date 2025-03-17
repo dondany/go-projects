@@ -17,25 +17,25 @@ func NewTodoPostgreSqlRepository(db *sql.DB) TodoRepository {
 	}
 }
 
-func (r TodoPostgreSqlRepository) GetTodoLists() ([]*models.TodoList, error) {
+func (r TodoPostgreSqlRepository) GetTodoLists() ([]models.TodoList, error) {
 	rows, err := r.db.Query("select id, name from lists")
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var lists []*models.TodoList
+	var lists []models.TodoList
 	for rows.Next() {
 		var list models.TodoList
 		if err := rows.Scan(&list.ID, &list.Name); err != nil {
 			return nil, err
 		}
-		lists = append(lists, &list)
+		lists = append(lists, list)
 	}
 	return lists, nil
 }
 
-func (r TodoPostgreSqlRepository) GetTodoList(id int) (*models.TodoList, error) {
+func (r TodoPostgreSqlRepository) GetTodoList(id int) (models.TodoList, error) {
 	query := `
 	select tl.id, tl.name, t.id, t.name, t.completed
 	from lists tl
@@ -44,11 +44,11 @@ func (r TodoPostgreSqlRepository) GetTodoList(id int) (*models.TodoList, error) 
 	`
 	rows, err := r.db.Query(query, id)
 	if err != nil {
-		return nil, err
+		return models.TodoList{}, err
 	}
 
 	var todoList models.TodoList
-	todoList.Todos = []*models.Todo{}
+	todoList.Todos = []models.Todo{}
 	var todoID sql.NullInt64
 	var todoName sql.NullString
 	var todoCompleted sql.NullBool
@@ -57,30 +57,30 @@ func (r TodoPostgreSqlRepository) GetTodoList(id int) (*models.TodoList, error) 
 		var todo models.Todo
 		if err := rows.Scan(&todoList.ID, &todoList.Name, &todoID, &todoName, &todoCompleted); err != nil {
 			fmt.Println(err)
-			return nil, err
+			return models.TodoList{}, err
 		}
 		if todoID.Valid && todoName.Valid && todoCompleted.Valid {
 			todo.ID = int(todoID.Int64)
 			todo.Name = todoName.String
 			todo.Completed = todoCompleted.Bool
-			todoList.Todos = append(todoList.Todos, &todo)
+			todoList.Todos = append(todoList.Todos, todo)
 		}
 	}
 
-	return &todoList, nil
+	return todoList, nil
 }
 
-func (r TodoPostgreSqlRepository) CreateTodoList(list models.TodoList) (*models.TodoList, error) {
+func (r TodoPostgreSqlRepository) CreateTodoList(list models.TodoList) (models.TodoList, error) {
 	var newList models.TodoList
 	err := r.db.QueryRow("insert into lists (name) values ($1) returning id, name", list.Name).Scan(&newList.ID, &newList.Name)
 	if err != nil {
 		fmt.Println(err)
-		return nil, err
+		return models.TodoList{}, err
 	}
-	return &newList, nil
+	return newList, nil
 }
 
-func (r TodoPostgreSqlRepository) UpdateTodoList(id int, list models.TodoList) (*models.TodoList, error) {
+func (r TodoPostgreSqlRepository) UpdateTodoList(id int, list models.TodoList) (models.TodoList, error) {
 	var updatedList models.TodoList
 
 	// Update the TodoList and return the updated record
@@ -90,9 +90,9 @@ func (r TodoPostgreSqlRepository) UpdateTodoList(id int, list models.TodoList) (
 	).Scan(&updatedList.ID, &updatedList.Name)
 	if err != nil {
 		fmt.Println(err)
-		return nil, err
+		return models.TodoList{}, err
 	}
-	return &updatedList, nil
+	return updatedList, nil
 }
 
 func (r TodoPostgreSqlRepository) DeleteTodoList(id int) error {
@@ -106,17 +106,17 @@ func (r TodoPostgreSqlRepository) DeleteTodoList(id int) error {
 	return nil
 }
 
-func (r TodoPostgreSqlRepository) CreateTodo(listId int, todo models.Todo) (*models.Todo, error) {
+func (r TodoPostgreSqlRepository) CreateTodo(listId int, todo models.Todo) (models.Todo, error) {
 	var newTodo models.Todo
 	err := r.db.QueryRow("insert into todos (name, completed, list_id) values ($1, $2, $3) returning id, name, completed", todo.Name, todo.Completed, listId).Scan(&newTodo.ID, &newTodo.Name, &newTodo.Completed)
 	if err != nil {
 		fmt.Println(err)
-		return nil, err
+		return models.Todo{}, err
 	}
-	return &newTodo, nil
+	return newTodo, nil
 }
 
-func (r TodoPostgreSqlRepository) UpdateTodo(listId int, id int, todo models.Todo) (*models.Todo, error) {
+func (r TodoPostgreSqlRepository) UpdateTodo(listId int, id int, todo models.Todo) (models.Todo, error) {
 	var updatedTodo models.Todo
 	err := r.db.QueryRow(
 		"update todos set name = $1, completed = $2 WHERE id = $3 RETURNING id, name, completed",
@@ -124,9 +124,9 @@ func (r TodoPostgreSqlRepository) UpdateTodo(listId int, id int, todo models.Tod
 	).Scan(&updatedTodo.ID, &updatedTodo.Name, &updatedTodo.Completed)
 	if err != nil {
 		fmt.Println(err)
-		return nil, err
+		return models.Todo{}, err
 	}
-	return &updatedTodo, nil
+	return updatedTodo, nil
 }
 
 func (r TodoPostgreSqlRepository) DeleteTodo(id int) error {

@@ -41,7 +41,7 @@ func main() {
 
 	mux.HandleFunc("POST /lists/{id}/todos", createTodo(service))
 	mux.HandleFunc("PUT /lists/{list_id}/todos/{todo_id}", updateTodo(service))
-	mux.HandleFunc("DELETE /lists/{list_id}/todos/{todo_id}", deleteTodo(service))
+	mux.HandleFunc("DELETE /lists/{list_id}/todos/{todo_giid}", deleteTodo(service))
 
 	err = http.ListenAndServe(":8081", mux)
 	fmt.Println(err)
