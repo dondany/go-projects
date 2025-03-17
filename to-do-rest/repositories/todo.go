@@ -6,12 +6,12 @@ import (
 
 type TodoRepository interface {
 	GetTodoLists() ([]*models.TodoList, error)
-	GetTodoList(name string) (*models.TodoList, error)
+	GetTodoList(id int) (*models.TodoList, error)
 	CreateTodoList(list models.TodoList) (*models.TodoList, error)
-	UpdateTodoList(name string, list models.TodoList) (*models.TodoList, error)
-	DeleteTodoList(name string) error
+	UpdateTodoList(id int, list models.TodoList) (*models.TodoList, error)
+	DeleteTodoList(id int) error
 
-	CreateTodo(name string, todo models.Todo) (*models.Todo, error)
-	UpdateTodo(name string, id int, todo models.Todo) (*models.Todo, error)
-	DeleteTodo(name string, id int) error
+	CreateTodo(listId int, todo models.Todo) (*models.Todo, error)
+	UpdateTodo(listId int, id int, todo models.Todo) (*models.Todo, error)
+	DeleteTodo(id int) error
 }

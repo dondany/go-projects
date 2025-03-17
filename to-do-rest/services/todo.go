@@ -7,14 +7,14 @@ import (
 
 type TodoService interface {
 	GetTodoLists() ([]*models.TodoList, error)
-	GetTodoList(name string) (*models.TodoList, error)
+	GetTodoList(id int) (*models.TodoList, error)
 	CreateTodoList(list models.TodoList) (*models.TodoList, error)
-	UpdateTodoList(name string, list models.TodoList) (*models.TodoList, error)
-	DeleteTodoList(name string) error
+	UpdateTodoList(id int, list models.TodoList) (*models.TodoList, error)
+	DeleteTodoList(id int) error
 
-	CreateTodo(name string, todo models.Todo) (*models.Todo, error)
-	UpdateTodo(name string, id int, todo models.Todo) (*models.Todo, error)
-	DeleteTodo(name string, id int) error
+	CreateTodo(listId int, todo models.Todo) (*models.Todo, error)
+	UpdateTodo(listId int, id int, todo models.Todo) (*models.Todo, error)
+	DeleteTodo(id int) error
 }
 
 type todoService struct {
@@ -29,30 +29,30 @@ func (t *todoService) GetTodoLists() ([]*models.TodoList, error) {
 	return t.repo.GetTodoLists()
 }
 
-func (t *todoService) GetTodoList(name string) (*models.TodoList, error) {
-	return t.repo.GetTodoList(name)
+func (t *todoService) GetTodoList(id int) (*models.TodoList, error) {
+	return t.repo.GetTodoList(id)
 }
 
 func (t *todoService) CreateTodoList(list models.TodoList) (*models.TodoList, error) {
 	return t.repo.CreateTodoList(list)
 }
 
-func (t *todoService) DeleteTodoList(name string) error {
-	return t.repo.DeleteTodoList(name)
+func (t *todoService) DeleteTodoList(id int) error {
+	return t.repo.DeleteTodoList(id)
 }
 
-func (t *todoService) UpdateTodoList(name string, list models.TodoList) (*models.TodoList, error) {
-	return t.repo.UpdateTodoList(name, list)
+func (t *todoService) UpdateTodoList(id int, list models.TodoList) (*models.TodoList, error) {
+	return t.repo.UpdateTodoList(id, list)
 }
 
-func (t *todoService) CreateTodo(name string, todo models.Todo) (*models.Todo, error) {
-	return t.repo.CreateTodo(name, todo)
+func (t *todoService) CreateTodo(listId int, todo models.Todo) (*models.Todo, error) {
+	return t.repo.CreateTodo(listId, todo)
 }
 
-func (t *todoService) UpdateTodo(name string, id int, todo models.Todo) (*models.Todo, error) {
-	return t.repo.UpdateTodo(name, id, todo)
+func (t *todoService) UpdateTodo(listId int, id int, todo models.Todo) (*models.Todo, error) {
+	return t.repo.UpdateTodo(listId, id, todo)
 }
 
-func (t *todoService) DeleteTodo(name string, id int) error {
-	return t.repo.DeleteTodo(name, id)
+func (t *todoService) DeleteTodo(id int) error {
+	return t.repo.DeleteTodo(id)
 }
