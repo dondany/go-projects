@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"log"
 	"net/http"
 
@@ -34,19 +33,4 @@ func main() {
 	mux.HandleFunc("DELETE /lists/{list_id}/todos/{todo_id}", handler.DeleteTodo)
 
 	http.ListenAndServe(":8081", mux)
-}
-
-func connectDb() *sql.DB {
-	dsn := "host=localhost port=5432 user=admin password=admin dbname=db sslmode=disable"
-
-	db, err := sql.Open("postgres", dsn)
-	if err != nil {
-		panic(err)
-	}
-
-	if err = db.Ping(); err != nil {
-		db.Close()
-		panic(err)
-	}
-	return db
 }
