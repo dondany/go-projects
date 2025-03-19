@@ -57,14 +57,15 @@ func (s *Server) GetTodoLists(ctx context.Context, filter *pb.TodoListFilter) (*
 		return nil, status.Errorf(codes.Internal, "failed to get a todolist: %v", err)
 	}
 
-	responseLists := make([]*pb.TodoListResponse, len(lists), cap(lists))
-	for _, l := range lists {
+	responseLists := make([]*pb.TodoListResponse, len(lists))
+
+	for i, l := range lists {
 		list := pb.TodoListResponse{
 			Id: l.ID,
 			Name: l.Name,
 			CreatedAt: timestamppb.New(l.CreatedAt),
 		}
-		responseLists = append(responseLists, &list)
+		responseLists[i] = &list
 	}
 
 	response := pb.TodoListsResponse{
