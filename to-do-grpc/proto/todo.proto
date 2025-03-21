@@ -29,8 +29,9 @@ message TodoResponse {
 
 message TodoListResponse {
     int32 id = 1;
-    string name = 2;
-    repeated TodoResponse todos = 3;
+    int32 userId = 2;
+    string name = 3;
+    repeated TodoResponse todos = 4;
     google.protobuf.Timestamp createdAt = 5;
 }
 
@@ -48,6 +49,7 @@ message TodoUpdateRequest {
 
 message TodoListRequest {
     string name = 1;
+    int32 userId = 2;
 }
 
 message UpdateTodoListRequest {
@@ -55,7 +57,9 @@ message UpdateTodoListRequest {
     string name = 2;
 }
 
-message TodoListFilter {}
+message TodoListFilter {
+    int32 userId = 1;
+}
 
 message TodoListsResponse {
     repeated TodoListResponse lists = 1;

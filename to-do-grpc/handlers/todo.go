@@ -1,12 +1,12 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/dondany/go-projects/to-do-grpc/pb"
 	"github.com/dondany/go-projects/to-do-grpc/todo"
@@ -23,12 +23,21 @@ func NewTodoHandler(service pb.TodoServiceClient) TodoHandler {
 }
 
 func (h TodoHandler) GetTodoLists(w http.ResponseWriter, r *http.Request) {
-	slog.Info("GET /lists")
-
-	response, err := h.service.GetTodoLists(context.Background(), &pb.TodoListFilter{})
+	slog.Info(r.Method + " " + r.URL.Path)
+	userIdStr := r.PathValue("userId")
+	userId, err := strconv.Atoi(userIdStr)
 	if err != nil {
-		w.Write(fmt.Appendf(nil, "Could not fetch lists"))
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(fmt.Appendf(nil, "Wrong id format"))
+		return
+	}
+
+	response, err := h.service.GetTodoLists(r.Context(), &pb.TodoListFilter{
+		UserId: int32(userId),
+	})
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(fmt.Appendf(nil, "Could not fetch lists"))
 	}
 
 	lists := make([]*todo.TodoList, len(response.Lists))
@@ -36,30 +45,53 @@ func (h TodoHandler) GetTodoLists(w http.ResponseWriter, r *http.Request) {
 		list := todo.TodoList{
 			ID: l.Id,
 			Name: l.Name,
+			UserID: l.UserId,
 			CreatedAt: l.CreatedAt.AsTime(),
 		}
 		lists[i] = &list
 	}
 
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(lists)
 }
 
 func (h TodoHandler) GetTodoList(w http.ResponseWriter, r *http.Request) {
+	slog.Info(r.Method + " " + r.URL.Path)
 	idStr := r.PathValue("id")
-	slog.Info("GET /lists/" + idStr)
 
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		w.Write(fmt.Appendf(nil, "Wrong id format"))
 		w.WriteHeader(http.StatusBadRequest)
+		w.Write(fmt.Appendf(nil, "Wrong id format"))
 		return
 	}
 
-	response, err := h.service.GetTodoList(context.Background(), &pb.ID{Id: int32(id)})
+	response, err := h.service.GetTodoList(r.Context(), &pb.ID{Id: int32(id)})
+	if err != nil {
+		if strings.Contains(err.Error(), "PermissionDenied") {
+			w.WriteHeader(http.StatusUnauthorized)
+		}
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	todos := make([]todo.Todo, len(response.Todos))
+	for i, t := range response.Todos {
+		todos[i] = todo.Todo{
+			ID: t.Id,
+			ListID: t.ListId,
+			Name: t.Name,
+			Completed: t.Completed,
+			CreatedAt: t.CreatedAt.AsTime(),
+		}
+	}
 
 	list := todo.TodoList{
 		ID: response.Id,
 		Name: response.Name,
+		UserID: response.UserId,
+		Todos: todos,
 		CreatedAt: response.CreatedAt.AsTime(),
 	}
 
@@ -67,42 +99,16 @@ func (h TodoHandler) GetTodoList(w http.ResponseWriter, r *http.Request) {
 		w.Write(fmt.Appendf(nil, "Could not fetch a list"))
 		w.WriteHeader(http.StatusInternalServerError)
 	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(list)
 }
 
 func (h TodoHandler) CreateTodoList(w http.ResponseWriter, r *http.Request) {
-	slog.Info("POST /lists/")
-
-	var list todo.TodoList
-	err := json.NewDecoder(r.Body).Decode(&list)
-	if err != nil {
-		w.Write(fmt.Appendf(nil, "Wrong request"))
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	req := &pb.TodoListRequest{
-		Name: list.Name,
-	}
-	response, err := h.service.CreateTodoList(context.Background(), req)
-	if err != nil {
-		w.Write(fmt.Appendf(nil, "Could not create a Todo List"))
-		return
-	}
-
-	createdList := todo.TodoList{
-		ID: response.Id,
-		Name: response.Name,
-		CreatedAt: response.CreatedAt.AsTime(),
-	}
-
-	json.NewEncoder(w).Encode(createdList)
-}
-
-func (h TodoHandler) UpdateTodoList(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
-	slog.Info("PATCH /lists/" + idStr)
-	id, err := strconv.Atoi(idStr)
+	slog.Info(r.Method + " " + r.URL.Path)
+	userIdStr := r.PathValue("userId")
+	userId, err := strconv.Atoi(userIdStr)
 	if err != nil {
 		w.Write(fmt.Appendf(nil, "Wrong id format"))
 		w.WriteHeader(http.StatusBadRequest)
@@ -117,14 +123,55 @@ func (h TodoHandler) UpdateTodoList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	req := &pb.TodoListRequest{
+		Name: list.Name,
+		UserId: int32(userId),
+	}
+	response, err := h.service.CreateTodoList(r.Context(), req)
+	fmt.Println(err)
+	if err != nil {
+		w.Write(fmt.Appendf(nil, "Could not create a Todo List"))
+		return
+	}
+
+	createdList := todo.TodoList{
+		ID: response.Id,
+		Name: response.Name,
+		CreatedAt: response.CreatedAt.AsTime(),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(createdList)
+}
+
+func (h TodoHandler) UpdateTodoList(w http.ResponseWriter, r *http.Request) {
+	slog.Info(r.Method + " " + r.URL.Path)
+	idStr := r.PathValue("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		w.Write(fmt.Appendf(nil, "Wrong id format"))
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	var list todo.TodoList
+	err = json.NewDecoder(r.Body).Decode(&list)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(fmt.Appendf(nil, "Wrong request"))
+		return
+	}
+
 	req := &pb.UpdateTodoListRequest{
 		Id: int32(id),
 		Name: list.Name,
 	}
 
-	res, err := h.service.UpdateTodoList(context.Background(), req)
+	res, err := h.service.UpdateTodoList(r.Context(), req)
 	if err != nil {
-		w.Write(fmt.Appendf(nil, "Could not create a Todo List"))
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(fmt.Appendf(nil, "Could not update a Todo List"))
 		return
 	}
 
@@ -134,23 +181,25 @@ func (h TodoHandler) UpdateTodoList(w http.ResponseWriter, r *http.Request) {
 		CreatedAt: res.CreatedAt.AsTime(),
 	}
 
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(updatedList)
 }
 
 func (h TodoHandler) DeleteTodoList(w http.ResponseWriter, r *http.Request) {
+	slog.Info(r.Method + " " + r.URL.Path)
 	idStr := r.PathValue("id")
-	slog.Info("DELETE /lists/" + idStr)
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		w.Write(fmt.Appendf(nil, "Wrong id format"))
 		w.WriteHeader(http.StatusBadRequest)
+		w.Write(fmt.Appendf(nil, "Wrong id format"))
 		return
 	}
 
-	_, err = h.service.DeleteTodoList(context.Background(), &pb.ID{Id: int32(id)})
+	_, err = h.service.DeleteTodoList(r.Context(), &pb.ID{Id: int32(id)})
 	if err != nil {
-		w.Write(fmt.Appendf(nil, "Could not delete a Todo List: %v", err.Error()))
 		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(fmt.Appendf(nil, "Could not delete a Todo List: %v", err.Error()))
 		return
 	}
 
@@ -158,21 +207,20 @@ func (h TodoHandler) DeleteTodoList(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h TodoHandler) CreateTodo(w http.ResponseWriter, r *http.Request) {
+	slog.Info(r.Method + " " + r.URL.Path)
 	idStr := r.PathValue("id")
-	slog.Info("DELETE /lists/" + idStr)
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		w.Write(fmt.Appendf(nil, "Wrong id format"))
 		w.WriteHeader(http.StatusBadRequest)
+		w.Write(fmt.Appendf(nil, "Wrong id format"))
 		return
 	}
-	slog.Info("POST /lists/" + idStr + "/todos")
 
 	var parsedTodo todo.Todo
 	err = json.NewDecoder(r.Body).Decode(&parsedTodo)
 	if err != nil {
-		w.Write(fmt.Appendf(nil, "Wrong request"))
 		w.WriteHeader(http.StatusBadRequest)
+		w.Write(fmt.Appendf(nil, "Wrong request"))
 		return
 	}
 
@@ -181,8 +229,9 @@ func (h TodoHandler) CreateTodo(w http.ResponseWriter, r *http.Request) {
 		Name: parsedTodo.Name,
 	}
 
-	res, err := h.service.CreateTodo(context.Background(), req)
+	res, err := h.service.CreateTodo(r.Context(), req)
 	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		w.Write(fmt.Appendf(nil, "Could not create a Todo"))
 		return
 	}
@@ -195,32 +244,34 @@ func (h TodoHandler) CreateTodo(w http.ResponseWriter, r *http.Request) {
 		CreatedAt: res.CreatedAt.AsTime(),
 	}
 
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(createdTodo)
 }
 
 func (h TodoHandler) UpdateTodo(w http.ResponseWriter, r *http.Request) {
+	slog.Info(r.Method + " " + r.URL.Path)
 	listIdStr := r.PathValue("list_id")
 	_, err := strconv.Atoi(listIdStr)
 	if err != nil {
-		w.Write(fmt.Appendf(nil, "Wrong list id format"))
 		w.WriteHeader(http.StatusBadRequest)
+		w.Write(fmt.Appendf(nil, "Wrong list id format"))
 		return
 	}
 
 	todoIdStr := r.PathValue("todo_id")
 	todoId, err := strconv.Atoi(todoIdStr)
 	if err != nil {
-		w.Write(fmt.Appendf(nil, "Wrong todo id format"))
 		w.WriteHeader(http.StatusBadRequest)
+		w.Write(fmt.Appendf(nil, "Wrong todo id format"))
 		return
 	}
-	slog.Info("PUT /lists/" + listIdStr + "/todos/" + todoIdStr)
 
 	var parsedTodo todo.Todo
 	err = json.NewDecoder(r.Body).Decode(&parsedTodo)
 	if err != nil {
-		w.Write(fmt.Appendf(nil, "Wrong request"))
 		w.WriteHeader(http.StatusBadRequest)
+		w.Write(fmt.Appendf(nil, "Wrong request"))
 		return
 	}
 
@@ -230,10 +281,10 @@ func (h TodoHandler) UpdateTodo(w http.ResponseWriter, r *http.Request) {
 		Completed: parsedTodo.Completed,
 	}
 
-	res, err := h.service.UpdateTodo(context.Background(), req)
+	res, err := h.service.UpdateTodo(r.Context(), req)
 	if err != nil {
-		w.Write(fmt.Appendf(nil, "Could not update a Todo"))
 		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(fmt.Appendf(nil, "Could not update a Todo"))
 		return
 	}
 
@@ -245,22 +296,25 @@ func (h TodoHandler) UpdateTodo(w http.ResponseWriter, r *http.Request) {
 		CreatedAt: res.CreatedAt.AsTime(),
 	}
 
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(updatedTodo)
 }
 
 func (h TodoHandler) DeleteTodo(w http.ResponseWriter, r *http.Request) {
+	slog.Info(r.Method + " " + r.URL.Path)
 	todoIdStr := r.PathValue("todo_id")
 	todoId, err := strconv.Atoi(todoIdStr)
 	if err != nil {
-		w.Write(fmt.Appendf(nil, "Wrong todo id format"))
 		w.WriteHeader(http.StatusBadRequest)
+		w.Write(fmt.Appendf(nil, "Wrong todo id format"))
 		return
 	}
 
-	_, err = h.service.DeleteTodo(context.Background(), &pb.ID{Id: int32(todoId)})
+	_, err = h.service.DeleteTodo(r.Context(), &pb.ID{Id: int32(todoId)})
 	if err != nil {
-		w.Write(fmt.Appendf(nil, "Could not delete a todo"))
 		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(fmt.Appendf(nil, "Could not delete a todo"))
 		return
 	}
 

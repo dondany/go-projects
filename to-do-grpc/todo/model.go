@@ -12,6 +12,7 @@ type Todo struct {
 
 type TodoList struct {
 	ID int32
+	UserID int32
 	Name string
 	Todos []Todo
 	CreatedAt time.Time

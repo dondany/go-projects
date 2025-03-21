@@ -8,14 +8,15 @@ import (
 
 type TodoRepository interface {
 	CreateTodoList(TodoList) (TodoList, error)
-	GetTodoList(listId int32) (TodoList, error)
-	GetTodoLists() ([]TodoList, error)
+	GetTodoList(int32) (TodoList, error)
+	GetTodoLists(int32) ([]TodoList, error)
 	UpdateTodoList(TodoList) (TodoList, error)
-	DeleteTodoList(listId int32) error
+	DeleteTodoList(int32) error
 
-	CreateTodo(todo Todo) (Todo, error)
-	UpdateTodo(todo Todo) (Todo, error)
-	DeleteTodo(id int32) error
+	CreateTodo(Todo) (Todo, error)
+	UpdateTodo(Todo) (Todo, error)
+	DeleteTodo(int32) error
+	GetTodoUserId(int32) (int32, error)
 }
 
 type PostgreTodoRepository struct {
@@ -31,16 +32,15 @@ func NewPostgreTodoRepository(db *sql.DB) PostgreTodoRepository {
 func (r PostgreTodoRepository) CreateTodoList(list TodoList) (TodoList, error) {
 	now := time.Now()
 	var newList TodoList
-	err := r.db.QueryRow("insert into lists (name, created_at) values ($1, $2) returning id, name, created_at", list.Name, now).Scan(&newList.ID, &newList.Name, &newList.CreatedAt)
+	err := r.db.QueryRow("insert into lists (name, user_id, created_at) values ($1, $2, $3) returning id, name, user_id, created_at", list.Name, list.UserID, now).Scan(&newList.ID, &newList.Name, &newList.UserID, &newList.CreatedAt)
 	if err != nil {
-		fmt.Println(err)
 		return TodoList{}, err
 	}
 	return newList, nil
 }
 
-func (r PostgreTodoRepository) GetTodoLists() ([]TodoList, error) {
-	rows, err := r.db.Query("select id, name from lists")
+func (r PostgreTodoRepository) GetTodoLists(userId int32) ([]TodoList, error) {
+	rows, err := r.db.Query("select id, name, user_id from lists where user_id = $1", userId)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +49,7 @@ func (r PostgreTodoRepository) GetTodoLists() ([]TodoList, error) {
 	var lists []TodoList
 	for rows.Next() {
 		var list TodoList
-		if err := rows.Scan(&list.ID, &list.Name); err != nil {
+		if err := rows.Scan(&list.ID, &list.Name, &list.UserID); err != nil {
 			return nil, err
 		}
 		lists = append(lists, list)
@@ -59,7 +59,7 @@ func (r PostgreTodoRepository) GetTodoLists() ([]TodoList, error) {
 
 func (r PostgreTodoRepository) GetTodoList(id int32) (TodoList, error) {
 	query := `
-	select tl.id, tl.name, t.id, t.name, t.completed
+	select tl.id, tl.name, tl.user_id, t.id, t.name, t.completed
 	from lists tl
 	left join todos t ON tl.id = t.list_id
 	where tl.id = $1
@@ -74,11 +74,11 @@ func (r PostgreTodoRepository) GetTodoList(id int32) (TodoList, error) {
 	var todoID sql.NullInt32
 	var todoName sql.NullString
 	var todoCompleted sql.NullBool
-
+	found := false
 	for rows.Next() {
+		found = true
 		var todo Todo
-		if err := rows.Scan(&todoList.ID, &todoList.Name, &todoID, &todoName, &todoCompleted); err != nil {
-			fmt.Println(err)
+		if err := rows.Scan(&todoList.ID, &todoList.Name, &todoList.UserID, &todoID, &todoName, &todoCompleted); err != nil {
 			return TodoList{}, err
 		}
 		if todoID.Valid && todoName.Valid && todoCompleted.Valid {
@@ -89,6 +89,9 @@ func (r PostgreTodoRepository) GetTodoList(id int32) (TodoList, error) {
 		}
 	}
 
+	if !found {
+		return TodoList{}, fmt.Errorf("list not found")
+	}
 	return todoList, nil
 }
 
@@ -99,7 +102,6 @@ func (r PostgreTodoRepository) UpdateTodoList(list TodoList) (TodoList, error) {
 		list.Name, list.ID,
 	).Scan(&updatedList.ID, &updatedList.Name)
 	if err != nil {
-		fmt.Println(err)
 		return TodoList{}, err
 	}
 	return updatedList, nil
@@ -147,4 +149,21 @@ func (r PostgreTodoRepository) DeleteTodo(id int32) error {
 		}
 	}
 	return nil
+}
+
+func (r PostgreTodoRepository) GetTodoUserId(id int32) (int32, error) {
+	query := `
+	select l.user_id
+	from todos t
+	join lists l ON t.list_id = l.id
+	where t.id = $1
+	`
+	var userId int32
+	err := r.db.QueryRow(query, id).Scan(&userId)
+
+	if err != nil {
+		return -1, err
+	}
+
+	return userId, nil
 }
