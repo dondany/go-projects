@@ -14,12 +14,72 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - postgres_network
+      - shared_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d db"]
+      interval: 10s
+      retries: 5
+      start_period: 10s
+
+  gateway:
+    build:
+      context: ./gateway-ms
+      dockerfile: Dockerfile
+    container_name: gateway-ms
+    environment:
+      LISTEN_PORT: 8080
+      USER_MS_HOST: user-ms
+      USER_MS_PORT: 9001
+      TODO_MS_HOST: todo-ms
+      TODO_MS_PORT: 9002
+    ports:
+      - "8080:8080"
+    depends_on:
+      - user-ms
+      - todo-ms
+    networks:
+      - shared_network
+
+  user-ms:
+    build:
+      context: ./user-ms
+      dockerfile: Dockerfile
+    container_name: user-ms
+    environment:
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: admin
+      DB_PASSWORD: admin
+      DB_NAME: db
+      LISTEN_PORT: 9001
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - shared_network
+
+  todo-ms:
+    build:
+      context: ./to-do-ms
+      dockerfile: Dockerfile
+    container_name: todo-ms
+    environment:
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: admin
+      DB_PASSWORD: admin
+      DB_NAME: db
+      LISTEN_PORT: 9002
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - shared_network
 
 volumes:
   postgres_data:
     driver: local
 
 networks:
-  postgres_network:
+  shared_network:
     driver: bridge

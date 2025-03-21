@@ -7,9 +7,9 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/dondany/go-projects/to-do-grpc/pb"
-	"github.com/dondany/go-projects/to-do-grpc/token"
-	"github.com/dondany/go-projects/to-do-grpc/user"
+	"github.com/dondany/go-projects/to-do-grpc/gateway-ms/model"
+	"github.com/dondany/go-projects/to-do-grpc/gateway-ms/pb"
+	"github.com/dondany/go-projects/to-do-grpc/gateway-ms/token"
 )
 
 type UserHandler struct {
@@ -25,7 +25,7 @@ func NewUserHandler(service pb.UserServiceClient) UserHandler {
 func (h UserHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 	slog.Info("POST /users/register")
 
-	var inputUser user.User
+	var inputUser model.User
 	err := json.NewDecoder(r.Body).Decode(&inputUser)
 	if err != nil {
 		fmt.Fprintf(w, `{"error": "Wrong request}`)
@@ -44,7 +44,7 @@ func (h UserHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error": "invalid credentials}`, http.StatusUnauthorized)
 	}
 
-	registeredUser := user.User{
+	registeredUser := model.User{
 		ID: response.Id,
 		Email: response.Email,
 		Name: response.Name,
@@ -58,7 +58,7 @@ func (h UserHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 func (h UserHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 	slog.Info("POST /users/login")
 
-	var inputUser user.UserLogin
+	var inputUser model.UserLogin
 	err := json.NewDecoder(r.Body).Decode(&inputUser)
 	if err != nil {
 		fmt.Fprintf(w, `{"error": "Wrong request}`)

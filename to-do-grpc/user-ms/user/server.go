@@ -3,7 +3,7 @@ package user
 import (
 	"context"
 
-	"github.com/dondany/go-projects/to-do-grpc/pb"
+	"github.com/dondany/go-projects/to-do-grpc/user-ms/pb"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"

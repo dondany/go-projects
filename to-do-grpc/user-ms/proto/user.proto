@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+package user;
+
+option go_package = "./pb";
+
+service UserService {
+    rpc CreateUser(UserRequest) returns (UserResponse);
+    rpc GetUserByEmail(UserEmail) returns (UserResponse);
+    rpc LoginUser(LoginRequest) returns (UserResponse);
+}
+
+message UserRequest {
+    int32 id = 1;
+    string name = 2;
+    string email = 3;
+    string password = 4;
+}
+
+message UserEmail {
+    string email = 1;
+}
+
+message UserResponse {
+    int32 id = 1;
+    string name = 2;
+    string email = 3;
+    google.protobuf.Timestamp createdAt = 4;
+}
+
+message LoginRequest {
+    string email = 1;
+    string password = 2;
+}

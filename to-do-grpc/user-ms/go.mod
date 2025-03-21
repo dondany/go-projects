@@ -1,4 +1,4 @@
-module github.com/dondany/go-projects/to-do-grpc
+module github.com/dondany/go-projects/to-do-grpc/user-ms
 
 go 1.24.0
 
@@ -10,7 +10,6 @@ require (
 )
 
 require (
-	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
 	golang.org/x/net v0.34.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
 	golang.org/x/text v0.23.0 // indirect

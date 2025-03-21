@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/dondany/go-projects/to-do-grpc/pb"
+	"github.com/dondany/go-projects/to-do-grpc/to-do-ms/pb"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"

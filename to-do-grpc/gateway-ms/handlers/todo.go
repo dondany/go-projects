@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/dondany/go-projects/to-do-grpc/pb"
-	"github.com/dondany/go-projects/to-do-grpc/todo"
+	"github.com/dondany/go-projects/to-do-grpc/gateway-ms/model"
+	"github.com/dondany/go-projects/to-do-grpc/gateway-ms/pb"
 )
 
 type TodoHandler struct {
@@ -40,9 +40,9 @@ func (h TodoHandler) GetTodoLists(w http.ResponseWriter, r *http.Request) {
 		w.Write(fmt.Appendf(nil, "Could not fetch lists"))
 	}
 
-	lists := make([]*todo.TodoList, len(response.Lists))
+	lists := make([]*model.TodoList, len(response.Lists))
 	for i, l := range response.Lists {
-		list := todo.TodoList{
+		list := model.TodoList{
 			ID: l.Id,
 			Name: l.Name,
 			UserID: l.UserId,
@@ -76,9 +76,9 @@ func (h TodoHandler) GetTodoList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	todos := make([]todo.Todo, len(response.Todos))
+	todos := make([]model.Todo, len(response.Todos))
 	for i, t := range response.Todos {
-		todos[i] = todo.Todo{
+		todos[i] = model.Todo{
 			ID: t.Id,
 			ListID: t.ListId,
 			Name: t.Name,
@@ -87,7 +87,7 @@ func (h TodoHandler) GetTodoList(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	list := todo.TodoList{
+	list := model.TodoList{
 		ID: response.Id,
 		Name: response.Name,
 		UserID: response.UserId,
@@ -115,7 +115,7 @@ func (h TodoHandler) CreateTodoList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var list todo.TodoList
+	var list model.TodoList
 	err = json.NewDecoder(r.Body).Decode(&list)
 	if err != nil {
 		w.Write(fmt.Appendf(nil, "Wrong request"))
@@ -134,7 +134,7 @@ func (h TodoHandler) CreateTodoList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	createdList := todo.TodoList{
+	createdList := model.TodoList{
 		ID: response.Id,
 		Name: response.Name,
 		CreatedAt: response.CreatedAt.AsTime(),
@@ -155,7 +155,7 @@ func (h TodoHandler) UpdateTodoList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var list todo.TodoList
+	var list model.TodoList
 	err = json.NewDecoder(r.Body).Decode(&list)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -175,7 +175,7 @@ func (h TodoHandler) UpdateTodoList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updatedList := todo.TodoList{
+	updatedList := model.TodoList{
 		ID: res.Id,
 		Name: res.Name,
 		CreatedAt: res.CreatedAt.AsTime(),
@@ -216,7 +216,7 @@ func (h TodoHandler) CreateTodo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var parsedTodo todo.Todo
+	var parsedTodo model.Todo
 	err = json.NewDecoder(r.Body).Decode(&parsedTodo)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -236,7 +236,7 @@ func (h TodoHandler) CreateTodo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	createdTodo := todo.Todo{
+	createdTodo := model.Todo{
 		ID: res.Id,
 		ListID: res.ListId,
 		Name: res.Name,
@@ -267,7 +267,7 @@ func (h TodoHandler) UpdateTodo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var parsedTodo todo.Todo
+	var parsedTodo model.Todo
 	err = json.NewDecoder(r.Body).Decode(&parsedTodo)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -288,7 +288,7 @@ func (h TodoHandler) UpdateTodo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updatedTodo := todo.Todo{
+	updatedTodo := model.Todo{
 		ID: res.Id,
 		ListID: res.ListId,
 		Name: res.Name,
