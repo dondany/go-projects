@@ -8,12 +8,16 @@ import (
 	"os"
 
 	"github.com/dondany/go-projects/to-do-grpc/gateway-ms/handlers"
+	"github.com/dondany/go-projects/to-do-grpc/gateway-ms/metrics"
 	"github.com/dondany/go-projects/to-do-grpc/gateway-ms/pb"
 	"github.com/dondany/go-projects/to-do-grpc/gateway-ms/token"
 	_ "github.com/lib/pq"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
+
+
 
 func main() {
 	userHost := os.Getenv("USER_MS_HOST")
@@ -43,6 +47,8 @@ func main() {
 	todoHandler := handlers.NewTodoHandler(todoService)
 
 	mux := http.NewServeMux()
+	//prometheus metrics
+	mux.Handle("/metrics", promhttp.Handler())
 
 	//auth routes(unprotected)
 	mux.HandleFunc("POST /user/register", userHandler.RegisterUser)
@@ -61,5 +67,5 @@ func main() {
 	mux.HandleFunc("DELETE /{userId}/lists/{list_id}/todos/{todo_id}", token.Protect(todoHandler.DeleteTodo))
 
 	listenPort := os.Getenv("LISTEN_PORT")
-	http.ListenAndServe(fmt.Sprintf(":%s", listenPort), mux)
+	http.ListenAndServe(fmt.Sprintf(":%s", listenPort), metrics.GeneralMetricsMiddleware(mux))
 }
