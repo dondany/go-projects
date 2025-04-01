@@ -44,11 +44,18 @@ func (h UserHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error": "invalid credentials}`, http.StatusUnauthorized)
 	}
 
+	tokenString, err := token.Create(response.Id)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, `{"error": "failed token generations}`, http.StatusInternalServerError)
+	}
+
 	registeredUser := model.User{
 		ID: response.Id,
 		Email: response.Email,
 		Name: response.Name,
 		CreatedAt: response.CreatedAt.AsTime(),
+		Token: tokenString,
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -82,7 +89,15 @@ func (h UserHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error": "failed token generations}`, http.StatusInternalServerError)
 	}
 
+	user := model.User{
+		ID: response.Id,
+		Email: response.Email,
+		Name: response.Name,
+		CreatedAt: response.CreatedAt.AsTime(),
+		Token: tokenString,
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w,  `{"token": "%s"}`, tokenString)
+	json.NewEncoder(w).Encode(user)
 }

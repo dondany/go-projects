@@ -136,6 +136,7 @@ func (h TodoHandler) CreateTodoList(w http.ResponseWriter, r *http.Request) {
 
 	createdList := model.TodoList{
 		ID: response.Id,
+		UserID: response.UserId,
 		Name: response.Name,
 		CreatedAt: response.CreatedAt.AsTime(),
 	}

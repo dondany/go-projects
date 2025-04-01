@@ -3,6 +3,7 @@ package todo
 import (
 	"database/sql"
 	"fmt"
+	"log/slog"
 	"time"
 )
 
@@ -32,7 +33,9 @@ func NewPostgreTodoRepository(db *sql.DB) PostgreTodoRepository {
 func (r PostgreTodoRepository) CreateTodoList(list TodoList) (TodoList, error) {
 	now := time.Now()
 	var newList TodoList
-	err := r.db.QueryRow("insert into lists (name, user_id, created_at) values ($1, $2, $3) returning id, name, user_id, created_at", list.Name, list.UserID, now).Scan(&newList.ID, &newList.Name, &newList.UserID, &newList.CreatedAt)
+	slog.Info("creating todo list", "list", list)
+	err := r.db.QueryRow("insert into lists (name, user_id, created_at) values ($1, $2, $3) returning id, name, user_id, created_at", 
+	list.Name, list.UserID, now).Scan(&newList.ID, &newList.Name, &newList.UserID, &newList.CreatedAt)
 	if err != nil {
 		return TodoList{}, err
 	}
@@ -63,6 +66,7 @@ func (r PostgreTodoRepository) GetTodoList(id int32) (TodoList, error) {
 	from lists tl
 	left join todos t ON tl.id = t.list_id
 	where tl.id = $1
+	order by tl.id asc, t.id asc;
 	`
 	rows, err := r.db.Query(query, id)
 	if err != nil {
@@ -121,7 +125,7 @@ func (r PostgreTodoRepository) DeleteTodoList(id int32) error {
 func (r PostgreTodoRepository) CreateTodo(todo Todo) (Todo, error) {
 	now := time.Now()
 	var newTodo Todo
-	err := r.db.QueryRow("insert into todos (name, completed, list_id, created_at) values ($1, $2, $3, $4) returning id, name, completed, created_at", todo.Name, todo.Completed, todo.ListID, now).Scan(&newTodo.ID, &newTodo.Name, &newTodo.Completed, &newTodo.CreatedAt)
+	err := r.db.QueryRow("insert into todos (name, completed, list_id, created_at) values ($1, $2, $3, $4) returning id, list_id, name, completed, created_at", todo.Name, todo.Completed, todo.ListID, now).Scan(&newTodo.ID, &newTodo.ListID, &newTodo.Name, &newTodo.Completed, &newTodo.CreatedAt)
 	if err != nil {
 		return Todo{}, err
 	}
@@ -131,9 +135,9 @@ func (r PostgreTodoRepository) CreateTodo(todo Todo) (Todo, error) {
 func (r PostgreTodoRepository) UpdateTodo(todo Todo) (Todo, error) {
 	var updatedTodo Todo
 	err := r.db.QueryRow(
-		"update todos set name = $1, completed = $2 WHERE id = $3 RETURNING id, name, completed",
+		"update todos set name = $1, completed = $2 WHERE id = $3 RETURNING id, list_id, name, completed",
 		todo.Name, todo.Completed, todo.ID,
-	).Scan(&updatedTodo.ID, &updatedTodo.Name, &updatedTodo.Completed)
+	).Scan(&updatedTodo.ID, &updatedTodo.ListID, &updatedTodo.Name, &updatedTodo.Completed)
 	if err != nil {
 		return Todo{}, err
 	}

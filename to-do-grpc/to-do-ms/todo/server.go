@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log/slog"
 
 	"github.com/dondany/go-projects/to-do-grpc/to-do-ms/pb"
 	"google.golang.org/grpc/codes"
@@ -31,7 +32,6 @@ func (s *Server) CreateTodoList(ctx context.Context, req *pb.TodoListRequest) (*
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to create a todolist: %v", err)
 	}
-
 	response := pb.TodoListResponse{
 		Id: list.ID,
 		Name: list.Name,
@@ -161,6 +161,7 @@ func (s *Server) CreateTodo(ctx context.Context, todo *pb.TodoRequest) (*pb.Todo
 		Name: todo.Name,
 		Completed: false,
 	})
+	slog.Info("Created", "Todo", newTodo)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to create todo: %v", err)
 	}
